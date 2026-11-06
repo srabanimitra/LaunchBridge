@@ -1,0 +1,10 @@
+Open your existing Laravel app/Models/User.php.
+1. Add: use Laravel\Sanctum\HasApiTokens;
+2. Add HasApiTokens to the class traits, e.g. use HasApiTokens, HasFactory, Notifiable;
+3. Add 'role' to the $fillable array. Keep 'password' in $fillable.
+4. Add this method inside User:
+   public function projects(): \Illuminate\Database\Eloquent\Relations\HasMany
+   {
+       return $this->hasMany(\App\Models\Project::class, 'startup_id');
+   }
+5. Ensure 'password' is cast as 'hashed' (Laravel default User model has this), or use Hash::make when saving.

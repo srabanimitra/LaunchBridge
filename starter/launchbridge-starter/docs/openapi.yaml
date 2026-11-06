@@ -1,0 +1,160 @@
+openapi: 3.0.3
+info:
+  title: LaunchBridge API
+  version: 0.1.0
+  description: Startup projects and graduate applications demo
+servers:
+  - url: http://127.0.0.1:8000/api
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+  schemas:
+    Register:
+      type: object
+      required: [name, email, password, password_confirmation, role]
+      properties:
+        name: {type: string, example: Startup Demo}
+        email: {type: string, format: email, example: startup@example.com}
+        password: {type: string, example: password123}
+        password_confirmation: {type: string, example: password123}
+        role: {type: string, enum: [graduate, startup]}
+    Login:
+      type: object
+      required: [email, password]
+      properties:
+        email: {type: string, format: email}
+        password: {type: string}
+    Project:
+      type: object
+      required: [title, description, skills, compensation]
+      properties:
+        title: {type: string, example: Build a startup dashboard}
+        description: {type: string, example: Create an internal dashboard for our small business.}
+        skills:
+          type: array
+          items: {type: string}
+          example: [Laravel, MySQL]
+        compensation: {type: string, example: BDT 3000 fixed}
+    Application:
+      type: object
+      required: [message]
+      properties:
+        message: {type: string, example: I have experience with Laravel and MySQL.}
+paths:
+  /register:
+    post:
+      summary: Register a graduate or startup
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/Register'}
+      responses:
+        '201': {description: Created; returns user and token}
+        '422': {description: Invalid input}
+  /login:
+    post:
+      summary: Obtain a bearer token
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/Login'}
+      responses:
+        '200': {description: Returns user and token}
+        '422': {description: Invalid credentials}
+  /me:
+    get:
+      summary: Current user
+      security: [{bearerAuth: []}]
+      responses:
+        '200': {description: Current user}
+        '401': {description: Unauthorized}
+  /logout:
+    post:
+      summary: Revoke current token
+      security: [{bearerAuth: []}]
+      responses:
+        '200': {description: Logged out}
+  /projects:
+    get:
+      summary: Browse open projects
+      responses:
+        '200': {description: Paginated projects}
+    post:
+      summary: Post a project (startup only)
+      security: [{bearerAuth: []}]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/Project'}
+      responses:
+        '201': {description: Project created}
+        '403': {description: Wrong role}
+        '422': {description: Invalid input}
+  /projects/{project}:
+    parameters:
+      - in: path
+        name: project
+        required: true
+        schema: {type: integer}
+    get:
+      summary: View a project
+      responses:
+        '200': {description: Project}
+        '404': {description: Not found}
+  /projects/{project}/apply:
+    parameters:
+      - in: path
+        name: project
+        required: true
+        schema: {type: integer}
+    post:
+      summary: Apply to a project (graduate only)
+      security: [{bearerAuth: []}]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/Application'}
+      responses:
+        '201': {description: Application created}
+        '403': {description: Wrong role}
+        '409': {description: Duplicate application or closed project}
+  /projects/{project}/applications:
+    parameters:
+      - in: path
+        name: project
+        required: true
+        schema: {type: integer}
+    get:
+      summary: List applications (project owner only)
+      security: [{bearerAuth: []}]
+      responses:
+        '200': {description: Paginated applications}
+        '403': {description: Not project owner}
+  /applications/{application}/status:
+    parameters:
+      - in: path
+        name: application
+        required: true
+        schema: {type: integer}
+    patch:
+      summary: Accept or reject an application (project owner only)
+      security: [{bearerAuth: []}]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [status]
+              properties:
+                status: {type: string, enum: [accepted, rejected]}
+      responses:
+        '200': {description: Application updated}
+        '403': {description: Not project owner}
+        '409': {description: Already reviewed}
